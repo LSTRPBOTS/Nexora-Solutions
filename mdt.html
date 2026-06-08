@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Officer MDT</title>
+  <style>
+    body { background:#111; color:white; font-family:Arial; padding:20px; }
+  </style>
+</head>
+<body>
+
+<h1>Officer MDT</h1>
+<div id="userInfo"></div>
+
+<script>
+const user = JSON.parse(localStorage.getItem("currentUser"));
+if (!user || user.role !== "Officer") window.location.href = "./index.html";
+
+document.getElementById("userInfo").innerText =
+  `Logged in as: ${user.name} (${user.badge})`;
+</script>
+
+</body>
+</html>

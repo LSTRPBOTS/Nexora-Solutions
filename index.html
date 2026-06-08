@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            margin: 0;
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #logo {
+            opacity: 0;
+            width: 180px;
+            transition: opacity 0.8s ease-in-out;
+        }
+    </style>
+
+    <script>
+        // FAST BROWSER → redirect instantly
+        const start = performance.now();
+
+        window.addEventListener("load", () => {
+            const loadTime = performance.now() - start;
+
+            if (loadTime < 150) {
+                // Fast browser → instant redirect
+                window.location.href = "/login.html";
+            } else {
+                // Slow browser → show logo fade-in, then redirect
+                document.getElementById("logo").style.opacity = 1;
+
+                setTimeout(() => {
+                    window.location.href = "/login.html";
+                }, 1000);
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <!-- Your Nexora logo -->
+    <img id="logo" src="/assets/logo.png" alt="Nexora Logo">
+</body>
+</html>
