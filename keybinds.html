@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Keybind Setup</title>
+    <style>
+        body { background:#111; color:#fff; font-family:Arial; padding:20px; }
+        nav { background:#000; padding:10px; margin-bottom:20px; }
+        nav a { color:#fff; margin-right:15px; text-decoration:none; }
+        input, button {
+            width:100%; padding:10px; margin-top:10px;
+            background:#222; color:#fff; border:1px solid #444;
+        }
+        button { cursor:pointer; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="./index.html">Login</a>
+    <a href="./servers.html">Servers</a>
+    <a href="./cad.html">CAD</a>
+    <a href="./mdt.html">MDT</a>
+    <a href="./radio.html">Radio</a>
+    <a href="./admin.html">Admin</a>
+    <a href="./settings.html">Settings</a>
+    <a href="./keybinds.html">Keybinds</a>
+</nav>
+
+<h2>Keybind Setup</h2>
+
+<label>Push-To-Talk</label>
+<input id="ptt" placeholder="Click then press a key" readonly>
+
+<label>Panic Button</label>
+<input id="panic" placeholder="Click then press a key" readonly>
+
+<label>Unit Toggle</label>
+<input id="unitToggle" placeholder="Click then press a key" readonly>
+
+<button onclick="save()">Save Keybinds</button>
+
+<script>
+const BACKEND = "https://nexora-solutions-offical.nexora-systems.workers.dev";
+const username = localStorage.getItem("username");
+if (!username) window.location.href = "index.html";
+
+function captureKey(inputId) {
+    const input = document.getElementById(inputId);
+    input.value = "Press any key...";
+    input.onkeydown = (e) => {
+        e.preventDefault();
+        input.value = e.code;
+        input.onkeydown = null;
+    };
+}
+
+document.getElementById("ptt").onclick = () => captureKey("ptt");
+document.getElementById("panic").onclick = () => captureKey("panic");
+document.getElementById("unitToggle").onclick = () => captureKey("unitToggle");
+
+async function loadExisting() {
+    const res = await fetch(`${BACKEND}/api/getKeybinds`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username })
+    });
+
+    const data = await res.json();
+    if (data.success && data.keybinds) {
+        document.getElementById("ptt").value = data.keybinds.ptt || "";
+        document.getElementById("panic").value = data.keybinds.panic || "";
+        document.getElementById("unitToggle").value = data.keybinds.unitToggle || "";
+    }
+}
+
+async function save() {
+    const keybinds = {
+        ptt: document.getElementById("ptt").value,
+        panic: document.getElementById("panic").value,
+        unitToggle: document.getElementById("unitToggle").value
+    };
+
+    const res = await fetch(`${BACKEND}/api/saveKeybinds`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, keybinds })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+        alert("Keybinds saved!");
+    } else {
+        alert("Error saving keybinds.");
+    }
+}
+
+loadExisting();
+</script>
+
+</body>
+</html>
