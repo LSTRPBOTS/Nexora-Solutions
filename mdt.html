@@ -1,22 +1,94 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Officer MDT</title>
-  <style>
-    body { background:#111; color:white; font-family:Arial; padding:20px; }
-  </style>
+    <title>MDT</title>
+    <style>
+        body { background:#111; color:#fff; font-family:Arial; padding:20px; }
+        nav { background:#000; padding:10px; margin-bottom:20px; }
+        nav a { color:#fff; margin-right:15px; text-decoration:none; }
+        .panel {
+            background:#222; padding:15px; border-radius:6px;
+            border:1px solid #333; margin-bottom:20px;
+        }
+        .call {
+            background:#181818; padding:10px; border:1px solid #333;
+            margin-top:10px;
+        }
+        button {
+            padding:8px; background:#333; color:#fff;
+            border:1px solid #444; cursor:pointer;
+        }
+    </style>
 </head>
 <body>
 
-<h1>Officer MDT</h1>
-<div id="userInfo"></div>
+<nav>
+    <a href="./index.html">Login</a>
+    <a href="./servers.html">Servers</a>
+    <a href="./cad.html">CAD</a>
+    <a href="./mdt.html">MDT</a>
+    <a href="./radio.html">Radio</a>
+    <a href="./admin.html">Admin</a>
+    <a href="./settings.html">Settings</a>
+</nav>
+
+<h2>Officer MDT</h2>
+<p>Server: <strong id="serverName"></strong></p>
+
+<div class="panel">
+    <h3>Active Calls</h3>
+    <div id="callList"></div>
+</div>
 
 <script>
-const user = JSON.parse(localStorage.getItem("currentUser"));
-if (!user || user.role !== "Officer") window.location.href = "./index.html";
+const BACKEND = "https://nexora-solutions-offical.nexora-systems.workers.dev";
 
-document.getElementById("userInfo").innerText =
-  `Logged in as: ${user.name} (${user.badge})`;
+const username = localStorage.getItem("username");
+if (!username) window.location.href = "./index.html";
+
+const urlParams = new URLSearchParams(window.location.search);
+const serverName = urlParams.get("server") || "Unknown Server";
+document.getElementById("serverName").innerText = serverName;
+
+// ---- FETCH CALLS ----
+async function fetchCalls() {
+    const res = await fetch(`${BACKEND}/api/calls`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverName })
+    });
+    const data = await res.json();
+    return data.calls || [];
+}
+
+// ---- RENDER CALLS ----
+async function renderCalls() {
+    const calls = await fetchCalls();
+    const box = document.getElementById("callList");
+    box.innerHTML = "";
+
+    if (!calls.length) {
+        box.innerHTML = "<em>No active calls.</em>";
+        return;
+    }
+
+    calls.forEach(call => {
+        const div = document.createElement("div");
+        div.className = "call";
+        div.innerHTML = `
+            <strong>Call #${call.id}</strong><br>
+            Type: ${call.type}<br>
+            Location: ${call.location}<br>
+            Priority: ${call.priority}<br>
+            Status: ${call.status}<br>
+            Units: ${call.units.join(", ") || "None"}
+        `;
+        box.appendChild(div);
+    });
+}
+
+renderCalls();
+setInterval(renderCalls, 2000);
 </script>
 
 </body>
