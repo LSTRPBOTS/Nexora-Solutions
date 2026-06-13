@@ -1,71 +1,35 @@
-// ===============================
-// LOAD SERVER SETTINGS
-// ===============================
-async function getSettings() {
-    const res = await fetch("/serverSettings.json");
-    return await res.json();
-}
+const BACKEND = "https://nexora-solutions-offical.nexora-systems.workers.dev";
 
-let settings = null;
+document.getElementById("user").innerText = localStorage.getItem("username") || "Unknown";
+
 let lastCallHash = null;
 
-// Load settings once
-getSettings().then(s => settings = s);
+async function checkCalls() {
+    const res = await fetch(`${BACKEND}/api/calls`);
+    const data = await res.json();
 
-// ===============================
-// MAIN LOOP — CHECK ERLC EVERY 2 SECONDS
-// ===============================
-setInterval(fetchERLCCalls, 2000);
+    if (!data.calls || data.calls.length === 0) return;
 
-async function fetchERLCCalls() {
-    if (!settings) return;
-    if (!settings.erlcApiKey) return;
+    const latest = data.calls[data.calls.length - 1];
 
-    try {
-        const res = await fetch("https://api.policeroleplay.community/v1/calls", {
-            headers: {
-                "Authorization": settings.erlcApiKey
-            }
-        });
+    const hash = `${latest.type}-${latest.description}-${latest.location}`;
 
-        const data = await res.json();
+    if (hash === lastCallHash) return;
 
-        const callType = data.callType;
-        const callDescription = data.callDescription;
-        const callLocation = data.callLocation;
+    lastCallHash = hash;
 
-        if (!callType || !callDescription || !callLocation) return;
-
-        const callHash = `${callType}-${callDescription}-${callLocation}`;
-
-        if (callHash === lastCallHash) return;
-
-        lastCallHash = callHash;
-
-        const call = {
-            id: "CALL-" + Math.floor(Math.random() * 999999),
-            type: callType,
-            description: callDescription,
-            location: callLocation
-        };
-
-        speakCall(call);
-
-    } catch (err) {
-        console.error("ERLC Fetch Error:", err);
-    }
+    speakCall(latest);
 }
 
-// ===============================
-// TTS ONLY — NO TONES
-// ===============================
+setInterval(checkCalls, 2000);
+
 function speakCall(call) {
     const msg = new SpeechSynthesisUtterance(
         `${call.id}. ${call.type}. ${call.description}. ${call.location}.`
     );
 
     msg.rate = 1;
-    msg.pitch = 0.9;
+    msg.pitch = 1;
     msg.volume = 1;
 
     speechSynthesis.speak(msg);
