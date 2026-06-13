@@ -1,30 +1,64 @@
-let lastCallId = null;
+// ===============================
+// LOAD SERVER SETTINGS
+// ===============================
+async function getSettings() {
+    const res = await fetch("/serverSettings.json");
+    return await res.json();
+}
 
-async function checkForCalls() {
-    const res = await fetch("/api/calls/list");
-    const data = await res.json();
+let settings = null;
+let lastCallHash = null;
 
-    if (data.calls.length === 0) return;
+// Load settings once
+getSettings().then(s => settings = s);
 
-    const latest = data.calls[data.calls.length - 1];
+// ===============================
+// MAIN LOOP — CHECK ERLC EVERY 2 SECONDS
+// ===============================
+setInterval(fetchERLCCalls, 2000);
 
-    if (!lastCallId) {
-        lastCallId = latest.id;
-        return;
-    }
+async function fetchERLCCalls() {
+    if (!settings) return;
+    if (!settings.erlcApiKey) return;
 
-    if (latest.id !== lastCallId) {
-        lastCallId = latest.id;
-        speakCall(latest);
+    try {
+        const res = await fetch("https://api.policeroleplay.community/v1/calls", {
+            headers: {
+                "Authorization": settings.erlcApiKey
+            }
+        });
+
+        const data = await res.json();
+
+        const callType = data.callType;
+        const callDescription = data.callDescription;
+        const callLocation = data.callLocation;
+
+        if (!callType || !callDescription || !callLocation) return;
+
+        const callHash = `${callType}-${callDescription}-${callLocation}`;
+
+        if (callHash === lastCallHash) return;
+
+        lastCallHash = callHash;
+
+        const call = {
+            id: "CALL-" + Math.floor(Math.random() * 999999),
+            type: callType,
+            description: callDescription,
+            location: callLocation
+        };
+
+        speakCall(call);
+
+    } catch (err) {
+        console.error("ERLC Fetch Error:", err);
     }
 }
 
-setInterval(checkForCalls, 2000);
-
-// ----------------------------
+// ===============================
 // TTS ONLY — NO TONES
-// ----------------------------
-
+// ===============================
 function speakCall(call) {
     const msg = new SpeechSynthesisUtterance(
         `${call.id}. ${call.type}. ${call.description}. ${call.location}.`
@@ -33,15 +67,6 @@ function speakCall(call) {
     msg.rate = 1;
     msg.pitch = 0.9;
     msg.volume = 1;
-
-    const voices = speechSynthesis.getVoices();
-    const voice = voices.find(v =>
-        v.name.toLowerCase().includes("male") ||
-        v.name.toLowerCase().includes("microsoft") ||
-        v.name.toLowerCase().includes("daniel")
-    );
-
-    if (voice) msg.voice = voice;
 
     speechSynthesis.speak(msg);
 }
