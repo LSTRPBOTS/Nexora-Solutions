@@ -40,6 +40,8 @@
 <div class="container">
     <div class="panel">
         <h2>Create Call</h2>
+        <p>Server: <strong id="serverName"></strong></p>
+
         <label>Call Type</label>
         <input id="callType" placeholder="Robbery, Traffic Stop, etc.">
 
@@ -74,12 +76,15 @@
 <script>
 const BACKEND = "https://nexora-solutions-offical.nexora-systems.workers.dev";
 
-// ---- LOGIN PROTECTION ----
-if (!localStorage.getItem("username")) {
-    window.location.href = "./index.html";
-}
+const username = localStorage.getItem("username");
+if (!username) window.location.href = "./index.html";
 
-// ---- LOAD UNITS FROM ADMIN ----
+const urlParams = new URLSearchParams(window.location.search);
+const serverName = urlParams.get("server") || "Unknown Server";
+document.getElementById("serverName").innerText = serverName;
+document.title = `CAD – ${serverName}`;
+
+// ---- UNITS (FROM ADMIN, STILL LOCAL) ----
 function loadUnits() {
     return JSON.parse(localStorage.getItem("unitList")) || [];
 }
@@ -99,18 +104,15 @@ function renderUnits() {
     });
 }
 
-// ---- FETCH CALLS FROM BACKEND ----
+// ---- FETCH CALLS FROM BACKEND (PER SERVER) ----
 async function fetchCalls() {
-    const res = await fetch(`${BACKEND}/api/calls`);
+    const res = await fetch(`${BACKEND}/api/calls`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverName })
+    });
     const data = await res.json();
     return data.calls || [];
-}
-
-// ---- SAVE CALL TO BACKEND ----
-async function saveCall(call) {
-    await fetch(`${BACKEND}/api/fetchERLC`, {
-        method: "POST"
-    });
 }
 
 // ---- CREATE CALL ----
@@ -135,12 +137,16 @@ async function createCall() {
         units: []
     };
 
-    // Save to backend
     await fetch(`${BACKEND}/api/saveCall`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(call)
+        body: JSON.stringify({ serverName, call })
     });
+
+    document.getElementById("callType").value = "";
+    document.getElementById("callLocation").value = "";
+    document.getElementById("callDesc").value = "";
+    document.getElementById("callPriority").value = "3";
 
     renderCalls();
 }
@@ -170,7 +176,7 @@ async function renderCalls() {
             Location: ${call.location}<br>
             Priority: ${call.priority}<br>
             Status: ${call.status}<br>
-            Units: ${call.units.join(", ") || "None"}<br><br>
+            Units: ${call.units && call.units.length ? call.units.join(", ") : "None"}<br><br>
 
             <label>Assign Unit</label>
             <select data-callid="${call.id}" class="unitSelect">
@@ -201,7 +207,7 @@ async function assignUnit(callId) {
     await fetch(`${BACKEND}/api/updateCall`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ callId, action: "assign", unit: selectedBadge })
+        body: JSON.stringify({ serverName, callId, action: "assign", unit: selectedBadge })
     });
 
     renderCalls();
@@ -212,7 +218,7 @@ async function setStatus(callId, status) {
     await fetch(`${BACKEND}/api/updateCall`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ callId, action: "status", status })
+        body: JSON.stringify({ serverName, callId, action: "status", status })
     });
 
     renderCalls();
