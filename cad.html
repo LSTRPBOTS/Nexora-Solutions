@@ -72,18 +72,14 @@
 </div>
 
 <script>
-const rawUser = localStorage.getItem("currentUser");
-if (!rawUser) window.location.href = "./index.html";
+const BACKEND = "https://nexora-solutions-offical.nexora-systems.workers.dev";
 
-// ---- CALL STORAGE (SHARED WITH MDT) ----
-let calls = JSON.parse(localStorage.getItem("calls")) || [];
-
-function saveCalls() {
-    localStorage.setItem("calls", JSON.stringify(calls));
-    window.dispatchEvent(new Event("storage"));
+// ---- LOGIN PROTECTION ----
+if (!localStorage.getItem("username")) {
+    window.location.href = "./index.html";
 }
 
-// ---- UNITS (FROM ADMIN) ----
+// ---- LOAD UNITS FROM ADMIN ----
 function loadUnits() {
     return JSON.parse(localStorage.getItem("unitList")) || [];
 }
@@ -103,8 +99,22 @@ function renderUnits() {
     });
 }
 
+// ---- FETCH CALLS FROM BACKEND ----
+async function fetchCalls() {
+    const res = await fetch(`${BACKEND}/api/calls`);
+    const data = await res.json();
+    return data.calls || [];
+}
+
+// ---- SAVE CALL TO BACKEND ----
+async function saveCall(call) {
+    await fetch(`${BACKEND}/api/fetchERLC`, {
+        method: "POST"
+    });
+}
+
 // ---- CREATE CALL ----
-function createCall() {
+async function createCall() {
     const type = document.getElementById("callType").value.trim();
     const loc = document.getElementById("callLocation").value.trim();
     const desc = document.getElementById("callDesc").value.trim();
@@ -125,18 +135,19 @@ function createCall() {
         units: []
     };
 
-    calls.push(call);
-    saveCalls();
-    renderCalls();
+    // Save to backend
+    await fetch(`${BACKEND}/api/saveCall`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(call)
+    });
 
-    document.getElementById("callType").value = "";
-    document.getElementById("callLocation").value = "";
-    document.getElementById("callDesc").value = "";
-    document.getElementById("callPriority").value = "3";
+    renderCalls();
 }
 
 // ---- RENDER CALLS ----
-function renderCalls() {
+async function renderCalls() {
+    const calls = await fetchCalls();
     const box = document.getElementById("callList");
     box.innerHTML = "";
 
@@ -176,11 +187,8 @@ function renderCalls() {
     });
 }
 
-function findCall(id) {
-    return calls.find(c => c.id === id);
-}
-
-function assignUnit(callId) {
+// ---- ASSIGN UNIT ----
+async function assignUnit(callId) {
     const selects = document.querySelectorAll(".unitSelect");
     let selectedBadge = "";
     selects.forEach(sel => {
@@ -190,25 +198,30 @@ function assignUnit(callId) {
     });
     if (!selectedBadge) return;
 
-    const call = findCall(callId);
-    if (!call.units.includes(selectedBadge)) {
-        call.units.push(selectedBadge);
-        saveCalls();
-        renderCalls();
-    }
-}
+    await fetch(`${BACKEND}/api/updateCall`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ callId, action: "assign", unit: selectedBadge })
+    });
 
-function setStatus(callId, status) {
-    const call = findCall(callId);
-    if (!call) return;
-    call.status = status;
-    saveCalls();
     renderCalls();
 }
 
-// INITIAL
+// ---- SET STATUS ----
+async function setStatus(callId, status) {
+    await fetch(`${BACKEND}/api/updateCall`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ callId, action: "status", status })
+    });
+
+    renderCalls();
+}
+
+// ---- INITIAL ----
 renderUnits();
 renderCalls();
+setInterval(renderCalls, 2000);
 </script>
 
 </body>
