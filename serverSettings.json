@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "TennesseeRP": {
+      "erlcApiKey": "",
+      "erlcApiUrl": ""
+    },
+    "FloridaRP": {
+      "erlcApiKey": "",
+      "erlcApiUrl": ""
+    }
+  }
+}
