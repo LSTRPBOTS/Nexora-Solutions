@@ -1,29 +1,19 @@
-function manualLogin() {
-  const user = document.getElementById("loginUser").value.trim();
-  const pass = document.getElementById("loginPass").value.trim();
+document.getElementById("loginBtn").onclick = async () => {
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
 
-  if (!user || !pass) {
-    alert("Enter username and password.");
-    return;
-  }
+    const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+    });
 
-  const stored = localStorage.getItem("account-" + user.toLowerCase());
-  if (!stored) {
-    alert("Account not found.");
-    return;
-  }
+    const data = await res.json();
 
-  const account = JSON.parse(stored);
-
-  if (account.password !== pass) {
-    alert("Incorrect password.");
-    return;
-  }
-
-  // Save session
-  localStorage.setItem("authProvider", "manual");
-  localStorage.setItem("username", account.username);
-  localStorage.setItem("authUserId", account.userId);
-
-  window.location.href = "/community.html";
-}
+    if (data.success) {
+        localStorage.setItem("username", username);
+        window.location.href = "/cad.html";
+    } else {
+        alert("Invalid login");
+    }
+};
