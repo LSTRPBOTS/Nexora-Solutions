@@ -1,71 +1,107 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Nexora CAD System - Master Panel</title>
-  <style>
-    body {
-      background-color: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 60px;
-    }
-    h1 { margin-bottom: 20px; }
-    .community-item {
-      background-color: #111;
-      border: 1px solid #333;
-      border-radius: 6px;
-      padding: 10px;
-      margin: 10px auto;
-      width: 320px;
-    }
-    button {
-      padding: 8px 16px;
-      background-color: #0078d7;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover { background-color: #005fa3; }
-  </style>
+    <title>Admin Panel</title>
+    <style>
+        body { background:#111; color:#fff; font-family:Arial; padding:20px; }
+        nav { background:#000; padding:10px; margin-bottom:20px; }
+        nav a { color:#fff; margin-right:15px; text-decoration:none; }
+        .panel {
+            background:#222; padding:15px; border-radius:6px;
+            border:1px solid #333; margin-bottom:20px;
+        }
+        input, button, select {
+            width:100%; padding:10px; margin-top:10px;
+            background:#333; color:#fff; border:1px solid #444;
+        }
+        button { cursor:pointer; }
+        .unit { padding:8px; background:#181818; border:1px solid #333; margin-top:8px; }
+    </style>
 </head>
 <body>
-  <h1>Master Access Panel</h1>
-  <div id="adminContent"><p>Loading communities...</p></div>
 
-  <script>
-    const isMaster = localStorage.getItem("isMasterLogin") === "true";
-    if (!isMaster) {
-      alert("Access denied. Master login required.");
-      window.location.href = "/community.html";
+<nav>
+    <a href="./index.html">Login</a>
+    <a href="./servers.html">Servers</a>
+    <a href="./cad.html">CAD</a>
+    <a href="./mdt.html">MDT</a>
+    <a href="./radio.html">Radio</a>
+    <a href="./admin.html">Admin</a>
+    <a href="./settings.html">Settings</a>
+</nav>
+
+<h2>Admin Panel</h2>
+
+<div class="panel">
+    <h3>Add Unit</h3>
+    <input id="unitBadge" placeholder="Badge Number">
+    <input id="unitName" placeholder="Unit Name">
+    <button onclick="addUnit()">Add Unit</button>
+</div>
+
+<div class="panel">
+    <h3>Units</h3>
+    <div id="unitList"></div>
+</div>
+
+<div class="panel">
+    <h3>Assign Server to User</h3>
+    <input id="adminUsername" placeholder="Username">
+    <input id="adminServer" placeholder="Server Name">
+    <button onclick="assignServer()">Assign Server</button>
+</div>
+
+<script>
+const BACKEND = "https://nexora-solutions-offical.nexora-systems.workers.dev";
+
+// ---- UNITS (LOCAL STORAGE) ----
+function loadUnits() {
+    return JSON.parse(localStorage.getItem("unitList")) || [];
+}
+
+function saveUnits(units) {
+    localStorage.setItem("unitList", JSON.stringify(units));
+}
+
+function addUnit() {
+    const badge = document.getElementById("unitBadge").value.trim();
+    const name = document.getElementById("unitName").value.trim();
+
+    if (!badge || !name) return alert("Enter badge and name.");
+
+    const units = loadUnits();
+    units.push({ badge, name });
+    saveUnits(units);
+
+    document.getElementById("unitBadge").value = "";
+    document.getElementById("unitName").value = "";
+
+    renderUnits();
+}
+
+function renderUnits() {
+    const units = loadUnits();
+    const box = document.getElementById("unitList");
+    box.innerHTML = "";
+
+    if (!units.length) {
+        box.innerHTML = "<em>No units added.</em>";
+        return;
     }
 
-    async function loadAdminCommunities() {
-      const res = await fetch("https://nexora-systems-worker.nexora-systems.workers.dev/communities?all=true");
-      const data = await res.json();
-      const container = document.getElementById("adminContent");
-      container.innerHTML = "";
-
-      data.communities.forEach(comm => {
+    units.forEach(u => {
         const div = document.createElement("div");
-        div.className = "community-item";
-        div.innerHTML = `
-          <h3>${comm.name}</h3>
-          <p>Code: ${comm.code}</p>
-          <button onclick="openCommunity('${comm.code}')">Enter Server</button>
-        `;
-        container.appendChild(div);
-      });
-    }
+        div.className = "unit";
+        div.textContent = `${u.badge} – ${u.name}`;
+        box.appendChild(div);
+    });
+}
 
-    function openCommunity(code) {
-      alert(`Master access granted to ${code}.`);
-      window.location.href = `/community_login.html?code=${encodeURIComponent(code)}&master=true`;
-    }
+// ---- ASSIGN SERVER TO USER ----
+async function assignServer() {
+    const username = document.getElementById("adminUsername").value.trim();
+    const serverName = document.getElementById("adminServer").value.trim();
 
-    document.addEventListener("DOMContentLoaded", loadAdminCommunities);
-  </script>
-</body>
-</html>
+    if (!username || !serverName) return alert("Enter username and server.");
+
+    const res = await fetch(`${
