@@ -1,36 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Radio Settings</title>
+    <title>Settings</title>
     <style>
-        body { background:#111; color:#fff; font-family:Arial; }
-        nav { background:#000; padding:10px; }
+        body { background:#111; color:#fff; font-family:Arial; padding:20px; }
+        nav { background:#000; padding:10px; margin-bottom:20px; }
         nav a { color:#fff; margin-right:15px; text-decoration:none; }
-        .container { padding:20px; max-width:500px; margin:auto; }
-        input, select, button {
+        input, button {
             width:100%; padding:10px; margin-top:10px;
-            background:#222; color:#fff; border:1px solid #555;
+            background:#222; color:#fff; border:1px solid #444;
         }
         button { cursor:pointer; }
-        #radioPreview {
-            width:200px; height:200px; margin-top:10px;
-            background:#222; background-size:contain;
-            background-repeat:no-repeat; background-position:center;
-        }
-        .bindBtn {
-            background:#333; border:1px solid #777;
-            cursor:pointer; margin-top:10px;
-        }
-        .bindBtn.recording {
-            background:#550000;
-            border-color:#ff0000;
-        }
     </style>
 </head>
 <body>
 
 <nav>
     <a href="./index.html">Login</a>
+    <a href="./servers.html">Servers</a>
     <a href="./cad.html">CAD</a>
     <a href="./mdt.html">MDT</a>
     <a href="./radio.html">Radio</a>
@@ -38,123 +25,34 @@
     <a href="./settings.html">Settings</a>
 </nav>
 
-<div class="container">
-    <h1>Radio Settings</h1>
+<h2>Settings</h2>
 
-    <label>Radio Model Name</label>
-    <input id="radioName" placeholder="Motorola APX 8000">
+<p>Set your ERLC API Key:</p>
 
-    <button onclick="findRadioImage()">Find Radio Image (placeholder)</button>
-
-    <label>Radio Image Preview</label>
-    <div id="radioPreview"></div>
-
-    <label>PTT Hotkey</label>
-    <button id="pttBind" class="bindBtn">Click to set PTT key</button>
-
-    <label>Panic Hotkey</label>
-    <button id="panicBind" class="bindBtn">Click to set Panic key</button>
-
-    <label>Frequency / Talkgroup</label>
-    <input id="frequency" placeholder="Example: 154.890 or TG 101">
-
-    <label>Panic Button Label</label>
-    <input id="panicLabel" placeholder="Example: EMERGENCY">
-
-    <label>Show Who Is Talking</label>
-    <select id="showTalking">
-        <option value="true">Yes</option>
-        <option value="false">No</option>
-    </select>
-
-    <button onclick="saveSettings()">Save Settings</button>
-</div>
+<input id="apiKey" placeholder="Enter ERLC API Key">
+<button onclick="saveKey()">Save Key</button>
 
 <script>
-const rawUser = localStorage.getItem("currentUser");
-if (!rawUser) window.location.href = "./index.html";
-const currentUser = JSON.parse(rawUser);
+const BACKEND = "https://nexora-solutions-offical.nexora-systems.workers.dev";
 
-let waitingForKey = null;
+async function saveKey() {
+    const key = document.getElementById("apiKey").value.trim();
+    if (!key) return alert("Enter a key.");
 
-function loadSettings() {
-    const s = currentUser.settings || {};
+    const res = await fetch(`${BACKEND}/api/setApiKey`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key })
+    });
 
-    document.getElementById("radioName").value = s.radioName || "";
-    document.getElementById("frequency").value = s.frequency || "154.890";
-    document.getElementById("panicLabel").value = s.panicButtonLabel || "PANIC";
-    document.getElementById("showTalking").value = s.showWhoIsTalking ? "true" : "false";
+    const data = await res.json();
 
-    document.getElementById("pttBind").innerText = s.pttKey || "Click to set PTT key";
-    document.getElementById("panicBind").innerText = s.panicKey || "Click to set Panic key";
-
-    if (s.radioImage) {
-        document.getElementById("radioPreview").style.backgroundImage = `url('${s.radioImage}')`;
+    if (data.success) {
+        alert("API Key saved!");
+    } else {
+        alert("Error saving key.");
     }
 }
-
-// KEY CAPTURE LOGIC
-document.addEventListener("keydown", (e) => {
-    if (!waitingForKey) return;
-
-    const key = e.code;
-
-    if (waitingForKey === "ptt") {
-        currentUser.settings.pttKey = key;
-        document.getElementById("pttBind").innerText = key;
-        document.getElementById("pttBind").classList.remove("recording");
-    }
-
-    if (waitingForKey === "panic") {
-        currentUser.settings.panicKey = key;
-        document.getElementById("panicBind").innerText = key;
-        document.getElementById("panicBind").classList.remove("recording");
-    }
-
-    waitingForKey = null;
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
-});
-
-// BUTTONS TO START CAPTURE
-document.getElementById("pttBind").addEventListener("click", () => {
-    waitingForKey = "ptt";
-    document.getElementById("pttBind").innerText = "Press any key...";
-    document.getElementById("pttBind").classList.add("recording");
-});
-
-document.getElementById("panicBind").addEventListener("click", () => {
-    waitingForKey = "panic";
-    document.getElementById("panicBind").innerText = "Press any key...";
-    document.getElementById("panicBind").classList.add("recording");
-});
-
-// Placeholder for radio image search
-async function findRadioImage() {
-    const name = document.getElementById("radioName").value.trim();
-    if (!name) return alert("Type a radio name first.");
-
-    const manual = prompt("TEMP: Paste an image URL for " + name);
-    if (!manual) return;
-
-    currentUser.settings.radioName = name;
-    currentUser.settings.radioImage = manual;
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
-
-    document.getElementById("radioPreview").style.backgroundImage = `url('${manual}')`;
-    alert("Radio image saved (manual placeholder).");
-}
-
-function saveSettings() {
-    currentUser.settings.radioName = document.getElementById("radioName").value.trim();
-    currentUser.settings.frequency = document.getElementById("frequency").value.trim();
-    currentUser.settings.panicButtonLabel = document.getElementById("panicLabel").value.trim();
-    currentUser.settings.showWhoIsTalking = document.getElementById("showTalking").value === "true";
-
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
-    alert("Settings saved permanently.");
-}
-
-loadSettings();
 </script>
 
 </body>
